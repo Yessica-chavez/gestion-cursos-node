@@ -115,6 +115,50 @@ app.post('/registrarCurso', protegerRuta, async (req, res) => {
   }
 });
 
+// Editar curso
+app.get('/editarCurso/:id', protegerRuta, async (req, res) => {
+  try {
+    const curso = await Curso.findByPk(req.params.id);
+    if (!curso) {
+      return res.status(404).send('Curso no encontrado');
+    }
+    res.render('editarCurso', { curso });
+  } catch (err) {
+    console.error('Error al obtener curso:', err);
+    res.status(500).send('Error al obtener el curso');
+  }
+});
+
+app.post('/editarCurso/:id', protegerRuta, async (req, res) => {
+  const { codigo, nombre } = req.body;
+  try {
+    const curso = await Curso.findByPk(req.params.id);
+    if (!curso) {
+      return res.status(404).send('Curso no encontrado');
+    }
+    await curso.update({ codigo, nombre });
+    res.redirect('/listarCursos');
+  } catch (err) {
+    console.error('Error al actualizar curso:', err);
+    res.status(500).send('Error al actualizar el curso');
+  }
+});
+
+// Eliminar curso
+app.post('/eliminarCurso/:id', protegerRuta, async (req, res) => {
+  try {
+    const curso = await Curso.findByPk(req.params.id);
+    if (!curso) {
+      return res.status(404).send('Curso no encontrado');
+    }
+    await curso.destroy();
+    res.redirect('/listarCursos');
+  } catch (err) {
+    console.error('Error al eliminar curso:', err);
+    res.status(500).send('Error al eliminar el curso');
+  }
+});
+
 // Logout
 app.get('/logout', (req, res) => {
   req.session.destroy();
