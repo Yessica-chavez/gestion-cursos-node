@@ -1,0 +1,45 @@
+# Dependencias
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Archivos de entorno
+#.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# Directorios de sistema
+.DS_Store
+Thumbs.db
+
+# Directorios de IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# Directorios de construcción
+dist/
+build/
+coverage/
+
+# Archivos temporales
+tmp/
+temp/
+
+# Archivos de base de datos
+*.sqlite
+*.sqlite3
+*.db
+
+# Archivos de caché
+.cache/
+.npm/
+.eslintcache 
