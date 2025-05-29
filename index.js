@@ -5,9 +5,9 @@ const path = require('path');
 require('dotenv').config();
 
 // Importar modelos y sequelize
-const sequelize = require('./config/database');
-const Usuario = require('./models/Usuario');
-const Curso = require('./models/Curso');
+const sequelize = require('./src/config/database');
+const Usuario = require('./src/models/Usuario');
+const Curso = require('./src/models/Curso');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -22,7 +22,7 @@ app.use(session({
 }));
 
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'src/views'));
 
 // Sincronizar modelos con la base de datos
 sequelize.sync()
