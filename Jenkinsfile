@@ -3,8 +3,8 @@ pipeline {
 
   environment {
     NODE_ENV = "production"
-    REMOTE_HOST = 'usuario@IP_SERVIDOR_PRODUCCION'
-    APP_DIR = '/home/usuario/app' // ruta en servidor de producción
+    REMOTE_HOST = 'yessica@192.168.111.50'
+    APP_DIR = '/home/yessica/app' // ruta en servidor de producción
   }
 
   tools {
