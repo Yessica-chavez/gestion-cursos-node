@@ -14,7 +14,7 @@ pipeline {
   stages {
     stage('Clonar repositorio') {
       steps {
-        git 'https://github.com/Yessica-chavez/gestion-cursos-node.git'
+        git branch: 'main', url: 'https://github.com/Yessica-chavez/gestion-cursos-node.git'
       }
     }
 
@@ -42,7 +42,7 @@ pipeline {
 
     stage('Construcción de imagen Docker') {
       steps {
-        sh 'docker build -t gestion-cursos-node .'
+        sh 'docker compose build'
       }
     }
 
