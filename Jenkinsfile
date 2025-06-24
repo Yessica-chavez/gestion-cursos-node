@@ -4,7 +4,7 @@ pipeline {
   environment {
     NODE_ENV = "production"
     REMOTE_HOST = 'yessica@192.168.111.50'
-    APP_DIR = '/home/yessica/app' // ruta en servidor de producción
+    APP_DIR = '/home/yessica/app' // Ruta de despliegue en el servidor remoto
   }
 
   tools {
@@ -21,28 +21,23 @@ pipeline {
     stage('SAST - Análisis de código (ESLint)') {
       steps {
         sh 'npm install eslint --save-dev'
-        sh './node_modules/.bin/eslint src || true'
+        sh './node_modules/.bin/eslint src --quiet || true'
       }
     }
 
-    stage('SCA - Análisis de dependencias') {
+    stage('SCA - Análisis de dependencias (Dependency-Check)') {
       steps {
-        sh 'curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip -o dc.zip'
-        sh 'unzip dc.zip'
-        sh './dependency-check/bin/dependency-check.sh --project gestion-cursos-node --scan . || true'
+        sh '''
+          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip -o dc.zip
+          unzip -q dc.zip
+          ./dependency-check/bin/dependency-check.sh --project gestion-cursos-node --scan . || true
+        '''
       }
     }
 
-    stage('SBOM - Inventario de componentes') {
+    stage('SBOM - Inventario de componentes (Syft)') {
       steps {
-        sh 'curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin'
-        sh 'syft dir:. > sbom.json || true'
-      }
-    }
-
-    stage('Construcción de imagen Docker') {
-      steps {
-        sh 'docker compose build'
+        sh 'docker run --rm -v $(pwd):/app anchore/syft dir:/app -o json > sbom.json || true'
       }
     }
 
@@ -55,9 +50,22 @@ pipeline {
               docker stop gestion-cursos-node || true &&
               docker rm gestion-cursos-node || true
             '
-            scp docker-compose.yml \$REMOTE_HOST:\$APP_DIR/
-            scp -r . \$REMOTE_HOST:\$APP_DIR/
-            ssh \$REMOTE_HOST 'cd \$APP_DIR && docker compose up -d --build'
+
+            # Sincronizar archivos (excluyendo lo innecesario)
+            rsync -av --delete \\
+              --exclude='.git' \\
+              --exclude='node_modules' \\
+              --exclude='sbom.json' \\
+              --exclude='dc.zip' \\
+              --exclude='dependency-check' \\
+              ./ \$REMOTE_HOST:\$APP_DIR/
+
+            # Construir y desplegar en el servidor remoto
+            ssh \$REMOTE_HOST '
+              cd \$APP_DIR &&
+              docker compose down &&
+              docker compose up -d --build
+            '
           """
         }
       }
