@@ -20,8 +20,8 @@ pipeline {
 
     stage('SAST - Análisis de código (ESLint)') {
       steps {
-        sh 'npm install eslint --save-dev'
-        sh './node_modules/.bin/eslint src --quiet || true'
+        sh 'npm install'
+        sh 'npx eslint src --quiet || true'
       }
     }
 
@@ -44,29 +44,27 @@ pipeline {
     stage('Despliegue remoto por SSH') {
       steps {
         sshagent(credentials: ['clave-ssh-produccion']) {
-          sh """
-            ssh -o StrictHostKeyChecking=no \$REMOTE_HOST '
-              mkdir -p \$APP_DIR &&
+          sh '''
+            ssh -o StrictHostKeyChecking=no $REMOTE_HOST '
+              mkdir -p $APP_DIR &&
               docker stop gestion-cursos-node || true &&
               docker rm gestion-cursos-node || true
             '
 
-            # Sincronizar archivos (excluyendo lo innecesario)
-            rsync -av --delete \\
-              --exclude='.git' \\
-              --exclude='node_modules' \\
-              --exclude='sbom.json' \\
-              --exclude='dc.zip' \\
-              --exclude='dependency-check' \\
-              ./ \$REMOTE_HOST:\$APP_DIR/
+            rsync -av --delete \
+              --exclude=".git" \
+              --exclude="node_modules" \
+              --exclude="sbom.json" \
+              --exclude="dc.zip" \
+              --exclude="dependency-check" \
+              ./ $REMOTE_HOST:$APP_DIR/
 
-            # Construir y desplegar en el servidor remoto
-            ssh \$REMOTE_HOST '
-              cd \$APP_DIR &&
+            ssh -o StrictHostKeyChecking=no $REMOTE_HOST '
+              cd $APP_DIR &&
               docker compose down &&
               docker compose up -d --build
             '
-          """
+          '''
         }
       }
     }
