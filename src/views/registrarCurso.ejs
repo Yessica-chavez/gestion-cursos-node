@@ -1,42 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Registrar Curso</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+  <title>Registrar Curso</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Registrar Nuevo Curso</h3>
-                    <a href="/listarCursos" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Volver
-                    </a>
-                </div>
-                <div class="card-body">
-                    <form action="/registrarCurso" method="POST">
-                        <div class="mb-3">
-                            <label for="codigo" class="form-label">Código del Curso:</label>
-                            <input type="text" class="form-control" id="codigo" name="codigo" 
-                                   placeholder="Ej: MAT101" required>
-                            <div class="form-text">Ingrese un código único para el curso.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre del Curso:</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" 
-                                   placeholder="Ej: Matemáticas Básicas" required>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Guardar Curso
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3>Registrar Nuevo Curso</h3>
+          <a href="/listarCursos" class="btn btn-secondary">Volver</a>
         </div>
+        <div class="card-body">
+          <form action="/registrarCurso" method="POST">
+            <div class="mb-3">
+              <label>Código del Curso:</label>
+              <input type="text" name="codigo" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label>Nombre del Curso:</label>
+              <input type="text" name="nombre" class="form-control" required>
+              <!-- ⚠️ Entrada sin escape permite inyectar HTML/JS -->
+            </div>
+            <button class="btn btn-primary w-100">Guardar Curso</button>
+          </form>
+        </div>
+      </div>
     </div>
+  </div>
 </body>
-</html> 
+</html>
