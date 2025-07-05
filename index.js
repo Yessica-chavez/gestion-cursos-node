@@ -1,169 +1,76 @@
 const express = require('express');
-const session = require('express-session');
-const cookieParser = require('cookie-parser');
-const path = require('path');
-require('dotenv').config();
-
-// Importar modelos y sequelize
-const sequelize = require('./src/config/database');
-const Usuario = require('./src/models/Usuario');
-const Curso = require('./src/models/Curso');
-
 const app = express();
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cookieParser());
-
-app.use(session({
-  secret: 'clave_secreta',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { maxAge: 600000 }
-}));
+const path = require('path');
+const mysql = require('mysql2');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src/views'));
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(session({ secret: 'inseguro', resave: false, saveUninitialized: true }));
 
-// Sincronizar modelos con la base de datos
-sequelize.sync()
-  .then(() => console.log('✅ Base de datos sincronizada'))
-  .catch(err => console.error('❌ Error sincronizando la base de datos:', err));
+// Conexión vulnerable sin protección
+const conn = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '', 
+  database: 'cursosdb'
+});
 
-// Middleware de autenticación
-function protegerRuta(req, res, next) {
-  if (req.session.usuario) next();
-  else res.redirect('/');
-}
+conn.connect(err => {
+  if (err) throw err;
+  console.log('✅ Conectado a MySQL');
+});
 
-// Página de login
 app.get('/', (req, res) => {
-  const mensaje = req.query.mensaje;
-  res.render('login', { mensaje });
+  res.redirect('/login');
 });
 
-// Página de registro
-app.get('/registro', (req, res) => res.render('registro'));
-
-app.post('/registro', async (req, res) => {
-  const { usuario, clave, confirmarClave } = req.body;
-  
-  try {
-    // Verificar si las contraseñas coinciden
-    if (clave !== confirmarClave) {
-      return res.send('❌ Las contraseñas no coinciden');
-    }
-
-    // Verificar si el usuario ya existe
-    const usuarioExistente = await Usuario.findOne({
-      where: { usuario }
-    });
-
-    if (usuarioExistente) {
-      return res.send('❌ El usuario ya existe');
-    }
-
-    // Crear nuevo usuario
-    await Usuario.create({ usuario, clave });
-    res.redirect('/?mensaje=Usuario registrado exitosamente');
-  } catch (err) {
-    console.error('Error en registro:', err);
-    res.status(500).send('Error en el servidor');
-  }
+app.get('/login', (req, res) => {
+  res.render('login', { mensaje: req.session.mensaje });
+  req.session.mensaje = null;
 });
 
-app.post('/login', async (req, res) => {
+// ⚠️ Lógica de login vulnerable a SQLi si lo modificas más adelante
+app.post('/login', (req, res) => {
   const { usuario, clave } = req.body;
-  try {
-    const user = await Usuario.findOne({
-      where: { usuario, clave }
-    });
-    
-    if (user) {
-      req.session.usuario = usuario;
-      res.redirect('/listarCursos');
-    } else {
-      res.send('❌ Credenciales incorrectas');
-    }
-  } catch (err) {
-    console.error('Error en login:', err);
-    res.status(500).send('Error en el servidor');
+  if (usuario === 'admin' && clave === '123') {
+    req.session.usuario = usuario;
+    res.redirect('/listarCursos');
+  } else {
+    req.session.mensaje = 'Credenciales incorrectas';
+    res.redirect('/login');
   }
 });
 
-// Página listar cursos (ahora es la página principal después del login)
-app.get('/listarCursos', protegerRuta, async (req, res) => {
-  try {
-    const cursos = await Curso.findAll();
+app.get('/listarCursos', (req, res) => {
+  conn.query('SELECT * FROM cursos', (err, cursos) => {
+    if (err) throw err;
     res.render('listarCursos', { cursos });
-  } catch (err) {
-    console.error('Error al obtener cursos:', err);
-    res.status(500).send('Error al obtener los cursos');
-  }
+  });
 });
 
-// Página registrar curso
-app.get('/registrarCurso', protegerRuta, (req, res) => res.render('registrarCurso'));
+app.get('/registrarCurso', (req, res) => {
+  res.render('agregarCurso');
+});
 
-app.post('/registrarCurso', protegerRuta, async (req, res) => {
+app.post('/registrarCurso', (req, res) => {
   const { codigo, nombre } = req.body;
-  try {
-    await Curso.create({ codigo, nombre });
+  // ⚠️ Vulnerabilidad: no hay validación ni escape de HTML
+  conn.query(`INSERT INTO cursos (codigo, nombre, created_at) VALUES (?, ?, NOW())`, [codigo, nombre], (err) => {
+    if (err) throw err;
     res.redirect('/listarCursos');
-  } catch (err) {
-    console.error('Error al registrar curso:', err);
-    res.status(500).send('Error al registrar el curso');
-  }
+  });
 });
 
-// Editar curso
-app.get('/editarCurso/:id', protegerRuta, async (req, res) => {
-  try {
-    const curso = await Curso.findByPk(req.params.id);
-    if (!curso) {
-      return res.status(404).send('Curso no encontrado');
-    }
-    res.render('editarCurso', { curso });
-  } catch (err) {
-    console.error('Error al obtener curso:', err);
-    res.status(500).send('Error al obtener el curso');
-  }
-});
-
-app.post('/editarCurso/:id', protegerRuta, async (req, res) => {
-  const { codigo, nombre } = req.body;
-  try {
-    const curso = await Curso.findByPk(req.params.id);
-    if (!curso) {
-      return res.status(404).send('Curso no encontrado');
-    }
-    await curso.update({ codigo, nombre });
+app.post('/eliminarCurso/:id', (req, res) => {
+  const id = req.params.id;
+  conn.query(`DELETE FROM cursos WHERE id = ${id}`, (err) => {
+    if (err) throw err;
     res.redirect('/listarCursos');
-  } catch (err) {
-    console.error('Error al actualizar curso:', err);
-    res.status(500).send('Error al actualizar el curso');
-  }
+  });
 });
 
-// Eliminar curso
-app.post('/eliminarCurso/:id', protegerRuta, async (req, res) => {
-  try {
-    const curso = await Curso.findByPk(req.params.id);
-    if (!curso) {
-      return res.status(404).send('Curso no encontrado');
-    }
-    await curso.destroy();
-    res.redirect('/listarCursos');
-  } catch (err) {
-    console.error('Error al eliminar curso:', err);
-    res.status(500).send('Error al eliminar el curso');
-  }
-});
-
-// Logout
-app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
-});
-
-const PORT = 3000;
-app.listen(PORT, () => console.log(`🚀 App corriendo en http://localhost:${PORT}`));
+app.listen(3000, () => console.log('🚀 Servidor corriendo en http://localhost:3000'));
